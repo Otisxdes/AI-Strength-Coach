@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -29,10 +29,7 @@ export default function LogPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
-  const [listening, setListening] = useState(false)
   const [exercises, setExercises] = useState<Exercise[]>([])
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
   const supabase = createClient()
   const router = useRouter()
 
@@ -140,30 +137,6 @@ export default function LogPage() {
     }
   }
 
-  function startVoice() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-    if (!SpeechRecognition) { setError('Voice not supported in this browser'); return }
-    const recognition = new SpeechRecognition()
-    recognition.continuous = false
-    recognition.interimResults = false
-    recognition.lang = 'en-US'
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript
-      setInput(prev => prev ? prev + ' ' + transcript : transcript)
-      setListening(false)
-    }
-    recognition.onerror = () => setListening(false)
-    recognition.onend = () => setListening(false)
-    recognition.start()
-    recognitionRef.current = recognition
-    setListening(true)
-  }
-
-  function stopVoice() {
-    recognitionRef.current?.stop()
-    setListening(false)
-  }
-
   function updateParsed(i: number, key: keyof ParsedSet, value: string | number | boolean | null) {
     setParsed(prev => prev.map((p, idx) => idx === i ? { ...p, [key]: value } : p))
   }
@@ -183,7 +156,7 @@ export default function LogPage() {
     <div className="p-4 space-y-4">
       <div className="pt-2">
         <h1 className="text-xl font-bold">Log Sets</h1>
-        <p className="text-zinc-400 text-sm">Type or speak naturally</p>
+        <p className="text-zinc-400 text-sm">Type naturally</p>
       </div>
 
       {/* Workout type */}
@@ -205,31 +178,15 @@ export default function LogPage() {
       </div>
 
       {/* Input */}
-      <div className="relative">
+      <div>
         <textarea
-          ref={textareaRef}
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder={`Type your sets…\n\nExamples:\n• Bench press 50kg 7 reps\n• Lat pulldown 55x10, 55x9, 52.5x8\n• Pull ups 15 reps bodyweight`}
           rows={6}
           className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-base focus:outline-none focus:border-zinc-600 resize-none"
         />
-        <button
-          onMouseDown={startVoice}
-          onMouseUp={stopVoice}
-          onTouchStart={startVoice}
-          onTouchEnd={stopVoice}
-          className={`absolute bottom-3 right-3 w-10 h-10 rounded-full flex items-center justify-center text-xl transition-colors ${
-            listening ? 'bg-red-500 animate-pulse' : 'bg-zinc-700'
-          }`}
-        >
-          🎤
-        </button>
       </div>
-
-      {listening && (
-        <p className="text-center text-sm text-red-400 animate-pulse">Listening… release to stop</p>
-      )}
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
