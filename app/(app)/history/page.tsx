@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { formatDate, getBestSet } from '@/lib/utils'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 
 export default async function HistoryPage() {
   const supabase = await createClient()
@@ -18,48 +22,53 @@ export default async function HistoryPage() {
     <div className="p-4 space-y-4">
       <div className="pt-2">
         <h1 className="text-xl font-bold">History</h1>
-        <p className="text-zinc-400 text-sm">{sessions?.length ?? 0} sessions</p>
+        <p className="text-muted-foreground text-sm">{sessions?.length ?? 0} sessions</p>
       </div>
 
       {!sessions?.length && (
-        <div className="bg-zinc-900 rounded-2xl p-6 text-center">
-          <p className="text-zinc-400">No sessions yet.</p>
-          <Link href="/log" className="text-white text-sm underline mt-2 block">Log your first workout</Link>
-        </div>
+        <Card>
+          <CardContent className="py-10 text-center space-y-3">
+            <p className="text-muted-foreground">No sessions yet.</p>
+            <Link href="/log" className={buttonVariants({ size: 'sm' })}>Log your first workout</Link>
+          </CardContent>
+        </Card>
       )}
 
       <div className="space-y-3">
         {sessions?.map(session => {
           const byExercise = groupByExercise(session.sets || [])
           return (
-            <Link
-              key={session.id}
-              href={`/history/${session.id}`}
-              className="block bg-zinc-900 rounded-2xl p-4 active:bg-zinc-800 transition-colors"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <p className="font-semibold">{session.workout_type}</p>
-                  <p className="text-zinc-400 text-xs">{formatDate(session.date)}</p>
-                </div>
-                <span className="text-zinc-500 text-sm">{session.sets?.length} sets →</span>
-              </div>
-              <div className="space-y-1">
-                {byExercise.slice(0, 3).map(({ exercise, sets }: { exercise: { id: string; name: string }, sets: Array<{ weight_kg: number | null; reps: number; is_bodyweight: boolean; id: string }> }) => {
-                  const best = getBestSet(sets as Parameters<typeof getBestSet>[0])
-                  return (
-                    <div key={exercise.id} className="flex justify-between text-sm">
-                      <span className="text-zinc-300">{exercise.name}</span>
-                      <span className="text-zinc-400">
-                        {best ? `${best.is_bodyweight ? 'BW' : `${best.weight_kg}kg`} × ${best.reps}` : '—'}
-                      </span>
+            <Link key={session.id} href={`/history/${session.id}`}>
+              <Card className="hover:bg-card/80 transition-colors active:scale-[0.99]">
+                <CardHeader className="pb-2 pt-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <p className="font-semibold leading-none">{session.workout_type}</p>
+                      <p className="text-muted-foreground text-xs">{formatDate(session.date)}</p>
                     </div>
-                  )
-                })}
-                {byExercise.length > 3 && (
-                  <p className="text-zinc-500 text-xs">+{byExercise.length - 3} more</p>
-                )}
-              </div>
+                    <Badge variant="secondary" className="text-xs">{session.sets?.length} sets</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="pb-4">
+                  <Separator className="mb-3" />
+                  <div className="space-y-1.5">
+                    {byExercise.slice(0, 3).map(({ exercise, sets }: { exercise: { id: string; name: string }, sets: Array<{ weight_kg: number | null; reps: number; is_bodyweight: boolean; id: string }> }) => {
+                      const best = getBestSet(sets as Parameters<typeof getBestSet>[0])
+                      return (
+                        <div key={exercise.id} className="flex justify-between items-center text-sm">
+                          <span className="text-foreground">{exercise.name}</span>
+                          <span className="text-muted-foreground font-mono text-xs">
+                            {best ? `${best.is_bodyweight ? 'BW' : `${best.weight_kg}kg`} × ${best.reps}` : '—'}
+                          </span>
+                        </div>
+                      )
+                    })}
+                    {byExercise.length > 3 && (
+                      <p className="text-muted-foreground text-xs">+{byExercise.length - 3} more exercises</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </Link>
           )
         })}

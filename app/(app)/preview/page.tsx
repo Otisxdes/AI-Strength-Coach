@@ -1,6 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
-import { getProgressionSuggestion, getBestSet, formatDate } from '@/lib/utils'
+import { getProgressionSuggestion } from '@/lib/utils'
 import Link from 'next/link'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import type { Exercise, Set } from '@/lib/types'
 
 const WORKOUT_TYPES = ['Chest + Biceps', 'Back + Triceps', 'Legs', 'Shoulders']
@@ -23,16 +27,17 @@ export default async function PreviewPage({ searchParams }: { searchParams: Prom
       <div className="p-4 space-y-4">
         <div className="pt-2">
           <h1 className="text-xl font-bold">Workout Preview</h1>
-          <p className="text-zinc-400 text-sm">Choose today's workout</p>
+          <p className="text-muted-foreground text-sm">Choose today's workout</p>
         </div>
-        <div className="space-y-3">
+        <div className="space-y-2">
           {WORKOUT_TYPES.map(t => (
-            <Link
-              key={t}
-              href={`/preview?type=${encodeURIComponent(t)}`}
-              className="block bg-zinc-900 rounded-2xl p-4 font-semibold active:bg-zinc-800 transition-colors"
-            >
-              {t} →
+            <Link key={t} href={`/preview?type=${encodeURIComponent(t)}`}>
+              <Card className="hover:bg-card/80 transition-colors active:scale-[0.99] cursor-pointer">
+                <CardContent className="py-4 flex justify-between items-center">
+                  <span className="font-medium">{t}</span>
+                  <span className="text-muted-foreground">→</span>
+                </CardContent>
+              </Card>
             </Link>
           ))}
         </div>
@@ -53,16 +58,19 @@ export default async function PreviewPage({ searchParams }: { searchParams: Prom
     return (
       <div className="p-4 space-y-4">
         <div className="pt-2">
-          <Link href="/preview" className="text-zinc-400 text-sm">← Back</Link>
+          <Link href="/preview" className="text-muted-foreground text-sm hover:text-foreground">← Back</Link>
           <h1 className="text-xl font-bold mt-1">{type}</h1>
         </div>
-        <p className="text-zinc-400">No exercises found for this workout type.</p>
-        <Link href="/exercises" className="text-white underline text-sm">Manage exercises</Link>
+        <Card>
+          <CardContent className="py-8 text-center space-y-3">
+            <p className="text-muted-foreground">No exercises for this workout type.</p>
+            <Link href="/exercises" className={buttonVariants({ size: 'sm', variant: 'outline' })}>Manage exercises</Link>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
-  // For each exercise, get last 3 sessions of data
   const exercisePreviews = await Promise.all(exercises.map(async (ex: Exercise) => {
     const { data: recentSets } = await supabase
       .from('sets')
@@ -74,58 +82,62 @@ export default async function PreviewPage({ searchParams }: { searchParams: Prom
 
     const suggestion = getProgressionSuggestion(ex, (recentSets || []) as Set[])
     const lastSet = recentSets?.[0]
-
-    return { exercise: ex, suggestion, lastSet, recentSets: recentSets || [] }
+    return { exercise: ex, suggestion, lastSet }
   }))
 
   return (
     <div className="p-4 space-y-4">
       <div className="pt-2">
-        <Link href="/preview" className="text-zinc-400 text-sm">← Back</Link>
+        <Link href="/preview" className="text-muted-foreground text-sm hover:text-foreground transition-colors">← Back</Link>
         <h1 className="text-xl font-bold mt-1">{type}</h1>
-        <p className="text-zinc-400 text-sm">Today's targets</p>
+        <p className="text-muted-foreground text-sm">Today's targets</p>
       </div>
 
-      <Link
-        href={`/log?type=${encodeURIComponent(type)}`}
-        className="block bg-white text-black rounded-xl p-3 text-center font-semibold text-sm"
-      >
-        ➕ Start Logging
-      </Link>
+      <Link href={`/log?type=${encodeURIComponent(type)}`} className={buttonVariants({ size: 'lg', className: 'w-full' })}>➕ Start Logging</Link>
 
       <div className="space-y-3">
         {exercisePreviews.map(({ exercise, suggestion, lastSet }) => (
-          <div key={exercise.id} className="bg-zinc-900 rounded-2xl p-4">
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <Link href={`/exercises/${exercise.id}`} className="font-semibold hover:underline">
-                  {exercise.name}
+          <Card key={exercise.id}>
+            <CardHeader className="pb-2 pt-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <Link href={`/exercises/${exercise.id}`} className="font-semibold hover:underline underline-offset-4">
+                    {exercise.name}
+                  </Link>
+                  <p className="text-muted-foreground text-xs mt-0.5">{exercise.muscle_group}</p>
+                </div>
+                <Link href={`/exercises/${exercise.id}`}>
+                  <Badge variant="outline" className="text-xs hover:bg-secondary cursor-pointer">History →</Badge>
                 </Link>
-                <p className="text-zinc-500 text-xs">{exercise.muscle_group}</p>
               </div>
-              <Link href={`/exercises/${exercise.id}`} className="text-zinc-500 text-xs">History →</Link>
-            </div>
-
-            {lastSet ? (
-              <div className="mt-2 space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">Last time</span>
-                  <span className="text-zinc-300">
-                    {lastSet.is_bodyweight ? 'BW' : `${lastSet.weight_kg}kg`} × {lastSet.reps}
-                  </span>
+            </CardHeader>
+            <CardContent className="pb-4">
+              {lastSet ? (
+                <div className="space-y-2">
+                  <Separator />
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Last time</span>
+                      <span className="font-mono text-xs">
+                        {lastSet.is_bodyweight ? 'BW' : `${lastSet.weight_kg}kg`} × {lastSet.reps}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Today's target</span>
+                      <span className="font-semibold text-foreground">
+                        {suggestion.weight ? `${suggestion.weight}kg` : 'BW'} × {suggestion.reps}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground text-xs leading-relaxed">{suggestion.reason}</p>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">Today's target</span>
-                  <span className="text-white font-medium">
-                    {suggestion.weight ? `${suggestion.weight}kg` : 'BW'} × {suggestion.reps}
-                  </span>
-                </div>
-                <p className="text-zinc-500 text-xs mt-2">{suggestion.reason}</p>
-              </div>
-            ) : (
-              <p className="text-zinc-500 text-xs mt-1">No data yet — start with a weight you can control for {exercise.rep_range_min}–{exercise.rep_range_max} reps</p>
-            )}
-          </div>
+              ) : (
+                <p className="text-muted-foreground text-xs mt-1">
+                  No data yet — start with a weight you can control for {exercise.rep_range_min}–{exercise.rep_range_max} reps
+                </p>
+              )}
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>

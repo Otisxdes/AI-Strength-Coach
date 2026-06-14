@@ -2,6 +2,11 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 const GOALS = [
   { value: 'hypertrophy', label: 'Build Muscle', desc: 'Maximize muscle size' },
@@ -34,8 +39,7 @@ export default function OnboardingPage() {
     setLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-
-    const { error } = await supabase.from('profiles').upsert({
+    await supabase.from('profiles').upsert({
       user_id: user.id,
       name: form.name,
       age: parseInt(form.age) || null,
@@ -45,88 +49,81 @@ export default function OnboardingPage() {
       goal: form.goal || 'hypertrophy',
       split: form.split
     })
-
-    // Seed exercises
     await fetch('/api/exercises/seed', { method: 'POST' })
-
     setLoading(false)
     router.push('/dashboard')
     router.refresh()
   }
 
   const steps = [
-    // Step 0: Name
     <div key={0} className="space-y-4">
-      <h2 className="text-xl font-bold">What's your name?</h2>
-      <input
-        autoFocus
-        type="text"
-        value={form.name}
-        onChange={e => set('name', e.target.value)}
-        placeholder="Your first name"
-        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-zinc-600"
-      />
+      <div>
+        <h2 className="text-xl font-bold">What's your name?</h2>
+        <p className="text-muted-foreground text-sm mt-1">We'll use this to personalize your experience</p>
+      </div>
+      <div className="space-y-1.5">
+        <Label>First name</Label>
+        <Input autoFocus value={form.name} onChange={e => set('name', e.target.value)} placeholder="Your first name" className="text-base h-12" />
+      </div>
     </div>,
-    // Step 1: Stats
+
     <div key={1} className="space-y-4">
-      <h2 className="text-xl font-bold">Basic stats</h2>
-      <p className="text-zinc-400 text-sm">Used to personalize suggestions. Skip if you prefer.</p>
+      <div>
+        <h2 className="text-xl font-bold">Basic stats</h2>
+        <p className="text-muted-foreground text-sm mt-1">Used to personalize suggestions. Skip if you prefer.</p>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         {[
-          { key: 'age', label: 'Age', placeholder: '25', type: 'number' },
-          { key: 'weight_kg', label: 'Weight (kg)', placeholder: '80', type: 'number' },
-          { key: 'height_cm', label: 'Height (cm)', placeholder: '175', type: 'number' },
+          { key: 'age', label: 'Age', placeholder: '25' },
+          { key: 'weight_kg', label: 'Weight (kg)', placeholder: '80' },
+          { key: 'height_cm', label: 'Height (cm)', placeholder: '175' },
         ].map(f => (
-          <div key={f.key} className={f.key === 'age' ? 'col-span-2' : ''}>
-            <label className="block text-sm text-zinc-400 mb-1">{f.label}</label>
-            <input
-              type={f.type}
-              value={form[f.key as keyof typeof form] as string}
-              onChange={e => set(f.key, e.target.value)}
-              placeholder={f.placeholder}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-zinc-600"
-            />
+          <div key={f.key} className={cn('space-y-1.5', f.key === 'age' && 'col-span-2')}>
+            <Label>{f.label}</Label>
+            <Input type="number" value={form[f.key as keyof typeof form] as string} onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder} />
           </div>
         ))}
       </div>
     </div>,
-    // Step 2: Experience
+
     <div key={2} className="space-y-4">
-      <h2 className="text-xl font-bold">Training experience</h2>
-      <div className="space-y-3">
+      <div>
+        <h2 className="text-xl font-bold">Training experience</h2>
+        <p className="text-muted-foreground text-sm mt-1">Helps calibrate progression speed</p>
+      </div>
+      <div className="space-y-2">
         {EXPERIENCE.map(e => (
-          <button
+          <Card
             key={e.value}
+            className={cn('cursor-pointer transition-colors', form.training_experience === e.value ? 'border-primary bg-primary/5' : 'hover:bg-muted/50')}
             onClick={() => set('training_experience', e.value)}
-            className={`w-full text-left p-4 rounded-xl border transition-colors ${
-              form.training_experience === e.value
-                ? 'border-white bg-zinc-800'
-                : 'border-zinc-800 bg-zinc-900'
-            }`}
           >
-            <div className="font-medium">{e.label}</div>
-            <div className="text-zinc-400 text-sm">{e.desc}</div>
-          </button>
+            <CardContent className="py-3 px-4">
+              <p className="font-medium">{e.label}</p>
+              <p className="text-muted-foreground text-sm">{e.desc}</p>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>,
-    // Step 3: Goal
+
     <div key={3} className="space-y-4">
-      <h2 className="text-xl font-bold">Primary goal</h2>
-      <div className="space-y-3">
+      <div>
+        <h2 className="text-xl font-bold">Primary goal</h2>
+        <p className="text-muted-foreground text-sm mt-1">Shapes rep ranges and progression advice</p>
+      </div>
+      <div className="space-y-2">
         {GOALS.map(g => (
-          <button
+          <Card
             key={g.value}
+            className={cn('cursor-pointer transition-colors', form.goal === g.value ? 'border-primary bg-primary/5' : 'hover:bg-muted/50')}
             onClick={() => set('goal', g.value)}
-            className={`w-full text-left p-4 rounded-xl border transition-colors ${
-              form.goal === g.value
-                ? 'border-white bg-zinc-800'
-                : 'border-zinc-800 bg-zinc-900'
-            }`}
           >
-            <div className="font-medium">{g.label}</div>
-            <div className="text-zinc-400 text-sm">{g.desc}</div>
-          </button>
+            <CardContent className="py-3 px-4">
+              <p className="font-medium">{g.label}</p>
+              <p className="text-muted-foreground text-sm">{g.desc}</p>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>,
@@ -138,35 +135,25 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen flex flex-col p-6 max-w-lg mx-auto">
       {/* Progress */}
-      <div className="flex gap-1 mb-8 pt-4">
+      <div className="flex gap-1.5 mb-8 pt-4">
         {steps.map((_, i) => (
-          <div
-            key={i}
-            className={`h-1 flex-1 rounded-full ${i <= step ? 'bg-white' : 'bg-zinc-800'}`}
-          />
+          <div key={i} className={cn('h-1 flex-1 rounded-full transition-colors', i <= step ? 'bg-primary' : 'bg-muted')} />
         ))}
       </div>
 
-      <div className="flex-1">
-        {steps[step]}
-      </div>
+      <div className="flex-1">{steps[step]}</div>
 
       <div className="flex gap-3 mt-8">
         {step > 0 && (
-          <button
-            onClick={() => setStep(s => s - 1)}
-            className="flex-1 bg-zinc-900 text-white py-3 rounded-xl font-medium"
-          >
-            Back
-          </button>
+          <Button variant="outline" className="flex-1" onClick={() => setStep(s => s - 1)}>Back</Button>
         )}
-        <button
+        <Button
+          className="flex-1"
           onClick={isLastStep ? finish : () => setStep(s => s + 1)}
           disabled={!canNext || loading}
-          className="flex-1 bg-white text-black py-3 rounded-xl font-semibold disabled:opacity-50"
         >
           {loading ? 'Setting up…' : isLastStep ? 'Get Started' : 'Continue'}
-        </button>
+        </Button>
       </div>
     </div>
   )

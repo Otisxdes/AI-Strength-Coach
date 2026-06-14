@@ -3,6 +3,9 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { getBestSet, estimateOneRM, getProgressionSuggestion, getTrend, formatDate } from '@/lib/utils'
 import ExerciseChart from './ExerciseChart'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
 import type { Set } from '@/lib/types'
 
 export default async function ExerciseDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -30,7 +33,6 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
 
   const allSets = (sets || []) as (Set & { workout_session: { date: string; workout_type: string } })[]
 
-  // Group by session
   const sessions: Map<string, typeof allSets> = new Map()
   allSets.forEach(set => {
     const key = (set as unknown as { workout_session: { date: string } }).workout_session?.date || 'unknown'
@@ -43,9 +45,12 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
   const suggestion = getProgressionSuggestion(exercise, allSets)
   const trend = getTrend(sessionList.map(([, s]) => s))
 
-  const trendLabel = { improving: '📈 Improving', stable: '➡️ Stable', declining: '📉 Declining' }[trend]
+  const trendConfig = {
+    improving: { label: 'Improving', variant: 'default' as const },
+    stable: { label: 'Stable', variant: 'secondary' as const },
+    declining: { label: 'Declining', variant: 'destructive' as const },
+  }[trend]
 
-  // Chart data
   const chartData = sessionList.slice(0, 10).reverse().map(([date, sets]) => {
     const best = getBestSet(sets)
     return {
@@ -59,50 +64,59 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
   return (
     <div className="p-4 space-y-4">
       <div className="pt-2">
-        <Link href="/exercises" className="text-zinc-400 text-sm">← Library</Link>
-        <h1 className="text-xl font-bold mt-1">{exercise.name}</h1>
-        <div className="flex gap-2 items-center mt-1">
-          <span className="text-zinc-400 text-sm">{exercise.muscle_group}</span>
-          <span className="text-zinc-600">·</span>
-          <span className="text-zinc-400 text-sm">{exercise.rep_range_min}–{exercise.rep_range_max} reps</span>
-          <span className="text-zinc-600">·</span>
-          <span className="text-sm">{trendLabel}</span>
+        <Link href="/exercises" className="text-muted-foreground text-sm hover:text-foreground transition-colors">← Library</Link>
+        <div className="flex items-start justify-between mt-1">
+          <div>
+            <h1 className="text-xl font-bold">{exercise.name}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-muted-foreground text-sm">{exercise.muscle_group}</span>
+              <span className="text-muted-foreground">·</span>
+              <span className="text-muted-foreground text-sm">{exercise.rep_range_min}–{exercise.rep_range_max} reps</span>
+            </div>
+          </div>
+          <Badge variant={trendConfig.variant}>{trendConfig.label}</Badge>
         </div>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="bg-zinc-900 rounded-xl p-3 text-center">
-          <p className="text-zinc-400 text-xs">Best Weight</p>
-          <p className="font-bold">{best ? `${best.is_bodyweight ? 'BW' : best.weight_kg + 'kg'}` : '—'}</p>
-        </div>
-        <div className="bg-zinc-900 rounded-xl p-3 text-center">
-          <p className="text-zinc-400 text-xs">Best e1RM</p>
-          <p className="font-bold">{best ? `${estimateOneRM(best.weight_kg ?? 0, best.reps)}kg` : '—'}</p>
-        </div>
-        <div className="bg-zinc-900 rounded-xl p-3 text-center">
-          <p className="text-zinc-400 text-xs">Sessions</p>
-          <p className="font-bold">{sessionList.length}</p>
-        </div>
+        {[
+          { label: 'Best Weight', value: best ? (best.is_bodyweight ? 'BW' : `${best.weight_kg}kg`) : '—' },
+          { label: 'Best e1RM', value: best ? `${estimateOneRM(best.weight_kg ?? 0, best.reps)}kg` : '—' },
+          { label: 'Sessions', value: String(sessionList.length) },
+        ].map(stat => (
+          <Card key={stat.label}>
+            <CardContent className="py-3 text-center">
+              <p className="text-muted-foreground text-xs">{stat.label}</p>
+              <p className="font-bold text-lg leading-tight mt-0.5">{stat.value}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Next target */}
-      <div className="bg-zinc-900 rounded-2xl p-4">
-        <h2 className="font-semibold mb-2">Next Session Target</h2>
-        <div className="flex justify-between items-center">
-          <p className="text-white font-bold text-lg">
+      <Card className="border-primary/20 bg-primary/5">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm text-muted-foreground font-medium">Next Session Target</CardTitle>
+        </CardHeader>
+        <CardContent className="pb-4">
+          <p className="text-2xl font-bold">
             {suggestion.weight ? `${suggestion.weight}kg` : 'BW'} × {suggestion.reps}
           </p>
-        </div>
-        <p className="text-zinc-400 text-sm mt-1">{suggestion.reason}</p>
-      </div>
+          <p className="text-muted-foreground text-sm mt-2 leading-relaxed">{suggestion.reason}</p>
+        </CardContent>
+      </Card>
 
       {/* Chart */}
       {chartData.length > 1 && (
-        <div className="bg-zinc-900 rounded-2xl p-4">
-          <h2 className="font-semibold mb-3">Progress</h2>
-          <ExerciseChart data={chartData} />
-        </div>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">e1RM Progress</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-4">
+            <ExerciseChart data={chartData} />
+          </CardContent>
+        </Card>
       )}
 
       {/* Session history */}
@@ -111,20 +125,27 @@ export default async function ExerciseDetailPage({ params }: { params: Promise<{
         {sessionList.map(([date, sets]) => {
           const best = getBestSet(sets)
           return (
-            <div key={date} className="bg-zinc-900 rounded-xl p-3">
-              <p className="text-zinc-400 text-xs mb-2">{formatDate(date)}</p>
-              <div className="space-y-1">
-                {sets.map((set, i) => (
-                  <div key={set.id} className="flex gap-3 text-sm">
-                    <span className="text-zinc-500 w-5">{i + 1}</span>
-                    <span>{set.is_bodyweight ? 'BW' : `${set.weight_kg}kg`} × {set.reps} reps</span>
-                  </div>
-                ))}
-              </div>
-              {best && (
-                <p className="text-zinc-500 text-xs mt-2">Best: {best.is_bodyweight ? 'BW' : `${best.weight_kg}kg`} × {best.reps} = {estimateOneRM(best.weight_kg ?? 0, best.reps)}kg e1RM</p>
-              )}
-            </div>
+            <Card key={date}>
+              <CardContent className="py-3">
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-muted-foreground text-xs">{formatDate(date)}</p>
+                  {best && (
+                    <Badge variant="outline" className="text-xs">
+                      e1RM {estimateOneRM(best.weight_kg ?? 0, best.reps)}kg
+                    </Badge>
+                  )}
+                </div>
+                <Separator className="mb-2" />
+                <div className="space-y-1">
+                  {sets.map((set, i) => (
+                    <div key={set.id} className="flex gap-3 text-sm items-center">
+                      <span className="text-muted-foreground font-mono text-xs w-4">{i + 1}</span>
+                      <span>{set.is_bodyweight ? 'BW' : `${set.weight_kg}kg`} × {set.reps} reps</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )
         })}
       </div>

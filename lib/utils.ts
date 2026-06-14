@@ -1,5 +1,5 @@
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
 import type { Set, Exercise } from './types'
 
 export function cn(...inputs: ClassValue[]) {
@@ -8,7 +8,6 @@ export function cn(...inputs: ClassValue[]) {
 
 export function estimateOneRM(weight: number, reps: number): number {
   if (reps === 1) return weight
-  // Epley formula
   return Math.round(weight * (1 + reps / 30))
 }
 

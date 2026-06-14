@@ -2,6 +2,10 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -34,67 +38,76 @@ export default function LoginPage() {
   if (sent) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="text-center max-w-sm">
-          <div className="text-4xl mb-4">📧</div>
-          <h1 className="text-xl font-bold mb-2">Check your email</h1>
-          <p className="text-zinc-400">We sent a confirmation link to <strong>{email}</strong></p>
-        </div>
+        <Card className="w-full max-w-sm text-center">
+          <CardContent className="pt-8 pb-8 space-y-3">
+            <div className="text-5xl">📧</div>
+            <h1 className="text-xl font-bold">Check your email</h1>
+            <p className="text-muted-foreground text-sm">We sent a confirmation link to <strong>{email}</strong></p>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🏋️</div>
+      <div className="w-full max-w-sm space-y-6">
+        <div className="text-center space-y-2">
+          <div className="text-5xl">🏋️</div>
           <h1 className="text-2xl font-bold">AI Strength Coach</h1>
-          <p className="text-zinc-400 text-sm mt-1">Track. Progress. Improve.</p>
+          <p className="text-muted-foreground text-sm">Track. Progress. Improve.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm text-zinc-400 mb-1">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-zinc-600"
-              placeholder="you@example.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-zinc-400 mb-1">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-base focus:outline-none focus:border-zinc-600"
-              placeholder="••••••••"
-            />
-          </div>
-          {error && <p className="text-red-400 text-sm">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-white text-black font-semibold py-3 rounded-xl text-base disabled:opacity-50"
-          >
-            {loading ? 'Loading…' : mode === 'login' ? 'Sign in' : 'Create account'}
-          </button>
-        </form>
-
-        <p className="text-center text-zinc-400 text-sm mt-6">
-          {mode === 'login' ? "Don't have an account? " : "Already have one? "}
-          <button
-            onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
-            className="text-white underline"
-          >
-            {mode === 'login' ? 'Sign up' : 'Sign in'}
-          </button>
-        </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>{mode === 'login' ? 'Sign in' : 'Create account'}</CardTitle>
+            <CardDescription>
+              {mode === 'login' ? 'Welcome back' : 'Get started for free'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                  placeholder="you@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  placeholder="••••••••"
+                />
+              </div>
+              {error && <p className="text-destructive text-sm">{error}</p>}
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Loading…' : mode === 'login' ? 'Sign in' : 'Create account'}
+              </Button>
+            </form>
+          </CardContent>
+          <CardFooter className="justify-center">
+            <p className="text-muted-foreground text-sm">
+              {mode === 'login' ? "Don't have an account? " : "Already have one? "}
+              <button
+                onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError('') }}
+                className="text-foreground underline underline-offset-4"
+              >
+                {mode === 'login' ? 'Sign up' : 'Sign in'}
+              </button>
+            </p>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   )

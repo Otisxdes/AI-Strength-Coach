@@ -2,6 +2,13 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
 interface ParsedSet {
   exercise_name: string
@@ -69,7 +76,6 @@ export default function LogPage() {
 
       const today = new Date().toISOString().split('T')[0]
 
-      // Get or create session
       let { data: session } = await supabase
         .from('workout_sessions')
         .select('id')
@@ -88,7 +94,6 @@ export default function LogPage() {
         session = newSession
       }
 
-      // Create any unknown exercises
       const setsToInsert = []
       for (const p of parsed) {
         let exerciseId = p.matched_exercise_id
@@ -144,8 +149,8 @@ export default function LogPage() {
   if (saved) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-5xl mb-3">✅</div>
+        <div className="text-center space-y-3">
+          <div className="text-5xl">✅</div>
           <p className="font-semibold text-lg">Saved!</p>
         </div>
       </div>
@@ -153,23 +158,26 @@ export default function LogPage() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-4 space-y-5">
       <div className="pt-2">
         <h1 className="text-xl font-bold">Log Sets</h1>
-        <p className="text-zinc-400 text-sm">Type naturally</p>
+        <p className="text-muted-foreground text-sm">Type naturally</p>
       </div>
 
       {/* Workout type */}
-      <div>
-        <label className="text-sm text-zinc-400 mb-2 block">Workout type</label>
+      <div className="space-y-2">
+        <Label>Workout type</Label>
         <div className="flex gap-2 flex-wrap">
           {WORKOUT_TYPES.map(t => (
             <button
               key={t}
               onClick={() => setWorkoutType(t)}
-              className={`px-3 py-2 rounded-xl text-sm border transition-colors ${
-                workoutType === t ? 'border-white bg-zinc-800 text-white' : 'border-zinc-800 text-zinc-400'
-              }`}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors',
+                workoutType === t
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-border text-muted-foreground hover:text-foreground hover:border-foreground/30'
+              )}
             >
               {t}
             </button>
@@ -178,110 +186,122 @@ export default function LogPage() {
       </div>
 
       {/* Input */}
-      <div>
-        <textarea
+      <div className="space-y-2">
+        <Label>Your sets</Label>
+        <Textarea
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder={`Type your sets…\n\nExamples:\n• Bench press 50kg 7 reps\n• Lat pulldown 55x10, 55x9, 52.5x8\n• Pull ups 15 reps bodyweight`}
           rows={6}
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl px-4 py-3 text-base focus:outline-none focus:border-zinc-600 resize-none"
+          className="resize-none font-mono text-sm"
         />
       </div>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && (
+        <p className="text-destructive text-sm">{error}</p>
+      )}
 
-      {/* Parse button */}
+      {/* Parse / Save */}
       {parsed.length === 0 ? (
-        <button
-          onClick={parseLog}
-          disabled={!input.trim() || parsing}
-          className="w-full bg-white text-black font-semibold py-3 rounded-xl disabled:opacity-50"
-        >
-          {parsing ? 'Parsing…' : 'Parse Sets'}
-        </button>
+        <div className="space-y-3">
+          <Button
+            onClick={parseLog}
+            disabled={!input.trim() || parsing}
+            className="w-full"
+            size="lg"
+          >
+            {parsing ? 'Parsing with AI…' : 'Parse Sets'}
+          </Button>
+          <div className="text-center">
+            <span className="text-muted-foreground text-xs">or </span>
+            <button
+              onClick={() => setParsed([{ exercise_name: '', matched_exercise_id: null, weight_kg: null, reps: 0, is_bodyweight: false, set_number: 1, notes: null }])}
+              className="text-muted-foreground text-xs underline underline-offset-4 hover:text-foreground"
+            >
+              add manually
+            </button>
+          </div>
+        </div>
       ) : (
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <h2 className="font-semibold">Review & Save</h2>
-            <button onClick={() => setParsed([])} className="text-zinc-400 text-sm">Edit</button>
+            <Button variant="ghost" size="sm" onClick={() => setParsed([])}>Edit input</Button>
           </div>
 
           {parsed.map((p, i) => (
-            <div key={i} className="bg-zinc-900 rounded-xl p-3 space-y-2">
-              <div className="flex gap-2 items-start">
-                <div className="flex-1">
-                  <p className="text-sm text-zinc-400">Exercise</p>
-                  <input
-                    value={p.exercise_name}
-                    onChange={e => updateParsed(i, 'exercise_name', e.target.value)}
-                    className="bg-transparent text-white text-sm w-full focus:outline-none border-b border-zinc-700 pb-1"
-                  />
-                  {!p.matched_exercise_id && (
-                    <p className="text-yellow-500 text-xs mt-0.5">New exercise — will be created</p>
-                  )}
+            <Card key={i}>
+              <CardContent className="pt-4 space-y-3">
+                <div className="flex gap-2 items-start">
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs text-muted-foreground">Exercise</Label>
+                    <Input
+                      value={p.exercise_name}
+                      onChange={e => updateParsed(i, 'exercise_name', e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                    {!p.matched_exercise_id && p.exercise_name && (
+                      <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500/30">New exercise</Badge>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => setParsed(prev => prev.filter((_, idx) => idx !== i))}
+                    className="text-muted-foreground hover:text-foreground mt-6 text-lg leading-none"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button onClick={() => setParsed(prev => prev.filter((_, idx) => idx !== i))} className="text-zinc-600 text-lg">×</button>
-              </div>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <p className="text-xs text-zinc-400">Weight</p>
-                  <div className="flex items-center gap-1">
-                    <input
+                <div className="flex gap-3 items-end">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Weight (kg)</Label>
+                    <Input
                       type="number"
                       value={p.weight_kg ?? ''}
                       onChange={e => updateParsed(i, 'weight_kg', e.target.value ? parseFloat(e.target.value) : null)}
                       disabled={p.is_bodyweight}
-                      className="bg-zinc-800 rounded-lg px-2 py-1 text-sm w-20 focus:outline-none disabled:opacity-50"
+                      className="h-8 w-24 text-sm"
                     />
-                    <span className="text-zinc-400 text-xs">kg</span>
                   </div>
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-zinc-400">Reps</p>
-                  <input
-                    type="number"
-                    value={p.reps}
-                    onChange={e => updateParsed(i, 'reps', parseInt(e.target.value) || 0)}
-                    className="bg-zinc-800 rounded-lg px-2 py-1 text-sm w-20 focus:outline-none"
-                  />
-                </div>
-                <div className="flex items-end pb-1">
-                  <label className="flex items-center gap-1 text-xs text-zinc-400">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Reps</Label>
+                    <Input
+                      type="number"
+                      value={p.reps}
+                      onChange={e => updateParsed(i, 'reps', parseInt(e.target.value) || 0)}
+                      className="h-8 w-20 text-sm"
+                    />
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-muted-foreground pb-1.5 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={p.is_bodyweight}
                       onChange={e => updateParsed(i, 'is_bodyweight', e.target.checked)}
-                      className="w-3 h-3"
+                      className="w-4 h-4 rounded"
                     />
                     BW
                   </label>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))}
 
-          <button
+          <Button
+            onClick={() => setParsed(prev => [...prev, { exercise_name: '', matched_exercise_id: null, weight_kg: null, reps: 0, is_bodyweight: false, set_number: prev.length + 1, notes: null }])}
+            variant="outline"
+            size="sm"
+            className="w-full"
+          >
+            + Add another set
+          </Button>
+
+          <Button
             onClick={saveSets}
             disabled={saving || !workoutType}
-            className="w-full bg-white text-black font-semibold py-3 rounded-xl disabled:opacity-50"
+            className="w-full"
+            size="lg"
           >
             {saving ? 'Saving…' : `Save ${parsed.length} Set${parsed.length !== 1 ? 's' : ''}`}
-          </button>
-        </div>
-      )}
-
-      {/* Quick manual entry */}
-      {parsed.length === 0 && (
-        <div className="text-center">
-          <p className="text-zinc-500 text-xs">Or</p>
-          <button
-            onClick={() => {
-              setParsed([{ exercise_name: '', matched_exercise_id: null, weight_kg: null, reps: 0, is_bodyweight: false, set_number: 1, notes: null }])
-            }}
-            className="text-zinc-400 text-sm underline mt-1"
-          >
-            Add manually
-          </button>
+          </Button>
         </div>
       )}
     </div>

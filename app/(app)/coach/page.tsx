@@ -1,5 +1,8 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -48,25 +51,25 @@ export default function CoachPage() {
   return (
     <div className="flex flex-col h-screen pb-20">
       {/* Header */}
-      <div className="p-4 pt-6 border-b border-zinc-900">
+      <div className="p-4 pt-6 border-b border-border">
         <h1 className="text-xl font-bold">AI Coach</h1>
-        <p className="text-zinc-400 text-sm">Ask about your training data</p>
+        <p className="text-muted-foreground text-sm">Backed by your real lift data</p>
       </div>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 && (
           <div className="space-y-4">
-            <p className="text-zinc-400 text-sm">Ask anything about your lifts, progression, or plateaus.</p>
+            <p className="text-muted-foreground text-sm">Ask anything about your lifts, progression, or plateaus.</p>
             <div className="space-y-2">
               {STARTER_QUESTIONS.map(q => (
-                <button
+                <Card
                   key={q}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors active:scale-[0.99]"
                   onClick={() => send(q)}
-                  className="w-full text-left bg-zinc-900 rounded-xl px-4 py-3 text-sm text-zinc-300 active:bg-zinc-800"
                 >
-                  {q}
-                </button>
+                  <CardContent className="py-3 px-4 text-sm">{q}</CardContent>
+                </Card>
               ))}
             </div>
           </div>
@@ -74,10 +77,10 @@ export default function CoachPage() {
 
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
+            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
               msg.role === 'user'
-                ? 'bg-white text-black'
-                : 'bg-zinc-900 text-zinc-100'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card border border-border text-foreground'
             }`}>
               {msg.content}
             </div>
@@ -86,7 +89,7 @@ export default function CoachPage() {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-zinc-900 rounded-2xl px-4 py-3 text-sm text-zinc-400">
+            <div className="bg-card border border-border rounded-2xl px-4 py-3 text-sm text-muted-foreground">
               Analyzing your data…
             </div>
           </div>
@@ -95,22 +98,18 @@ export default function CoachPage() {
       </div>
 
       {/* Input */}
-      <div className="fixed bottom-16 left-0 right-0 max-w-lg mx-auto p-4 bg-zinc-950 border-t border-zinc-900">
+      <div className="fixed bottom-16 left-0 right-0 max-w-lg mx-auto p-4 bg-background/95 backdrop-blur border-t border-border">
         <div className="flex gap-2">
-          <input
+          <Input
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
             placeholder="Ask about your training…"
-            className="flex-1 bg-zinc-900 rounded-xl px-4 py-3 text-sm focus:outline-none"
+            className="flex-1"
           />
-          <button
-            onClick={() => send()}
-            disabled={!input.trim() || loading}
-            className="bg-white text-black px-4 py-3 rounded-xl font-semibold text-sm disabled:opacity-50"
-          >
+          <Button onClick={() => send()} disabled={!input.trim() || loading}>
             Send
-          </button>
+          </Button>
         </div>
       </div>
     </div>

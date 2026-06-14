@@ -1,7 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { formatDate, getBestSet, getProgressionSuggestion } from '@/lib/utils'
+import { formatDate, getBestSet } from '@/lib/utils'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { buttonVariants } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -21,86 +25,94 @@ export default async function DashboardPage() {
   const sessions = sessionsRes.data || []
   const lastSession = sessions[0]
 
-  // Check if profile is complete
-  if (!profile || !profile.name) {
-    redirect('/onboarding')
-  }
+  if (!profile || !profile.name) redirect('/onboarding')
 
   const today = new Date().toISOString().split('T')[0]
   const todaySession = sessions.find(s => s.date === today)
+  const splitTypes: string[] = profile.split || ['Chest + Biceps', 'Back + Triceps', 'Legs', 'Shoulders']
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-5">
       {/* Header */}
       <div className="pt-2">
-        <p className="text-zinc-400 text-sm">Good {getGreeting()}</p>
+        <p className="text-muted-foreground text-sm">Good {getGreeting()}</p>
         <h1 className="text-2xl font-bold">{profile.name?.split(' ')[0] ?? 'Athlete'}</h1>
       </div>
 
       {/* Quick Log CTA */}
-      <Link
-        href="/log"
-        className="block bg-white text-black rounded-2xl p-4 text-center font-semibold text-lg active:scale-[0.98] transition-transform"
-      >
+      <Link href="/log" className={buttonVariants({ size: 'lg', className: 'w-full h-12 text-base font-semibold' })}>
         ➕ Log a Set
       </Link>
 
-      {/* Today's preview */}
-      <div className="bg-zinc-900 rounded-2xl p-4">
-        <div className="flex justify-between items-center mb-3">
-          <h2 className="font-semibold">Today's Workout</h2>
-          <Link href="/preview" className="text-sm text-zinc-400">Preview →</Link>
-        </div>
-        {todaySession ? (
-          <div>
-            <p className="text-zinc-300 font-medium">{todaySession.workout_type}</p>
-            <p className="text-zinc-400 text-sm">{todaySession.sets?.length} sets logged</p>
+      {/* Today's workout */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-base">Today's Workout</CardTitle>
+            <Link href="/preview" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Preview →
+            </Link>
           </div>
-        ) : (
-          <div className="flex gap-2 flex-wrap">
-            {(profile.split || ['Chest + Biceps', 'Back + Triceps', 'Legs', 'Shoulders']).map((type: string) => (
-              <Link
-                key={type}
-                href={`/preview?type=${encodeURIComponent(type)}`}
-                className="bg-zinc-800 text-zinc-200 px-3 py-2 rounded-xl text-sm"
-              >
-                {type}
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+        </CardHeader>
+        <CardContent>
+          {todaySession ? (
+            <div className="space-y-1">
+              <p className="font-medium">{todaySession.workout_type}</p>
+              <p className="text-muted-foreground text-sm">{todaySession.sets?.length} sets logged</p>
+            </div>
+          ) : (
+            <div className="flex gap-2 flex-wrap">
+              {splitTypes.map((type: string) => (
+                <Link key={type} href={`/preview?type=${encodeURIComponent(type)}`} className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+                  {type}
+                </Link>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Last session */}
       {lastSession && (
-        <div className="bg-zinc-900 rounded-2xl p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="font-semibold">Last Session</h2>
-            <Link href="/history" className="text-sm text-zinc-400">All →</Link>
-          </div>
-          <p className="text-zinc-400 text-xs mb-2">{formatDate(lastSession.date)} · {lastSession.workout_type}</p>
-          <div className="space-y-1">
-            {groupByExercise(lastSession.sets || []).slice(0, 4).map(({ exercise, sets }: { exercise: { id: string; name: string }, sets: Array<{ weight_kg: number | null; is_bodyweight: boolean; reps: number }> }) => {
-              const best = getBestSet(sets as Parameters<typeof getBestSet>[0])
-              return (
-                <div key={exercise.id} className="flex justify-between text-sm">
-                  <span className="text-zinc-300">{exercise.name}</span>
-                  <span className="text-zinc-400">
-                    {best ? `${best.weight_kg ?? 'BW'}kg × ${best.reps}` : '—'}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-base">Last Session</CardTitle>
+              <Link href="/history" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                All →
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">{lastSession.workout_type}</Badge>
+              <span className="text-muted-foreground text-xs">{formatDate(lastSession.date)}</span>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              {groupByExercise(lastSession.sets || []).slice(0, 4).map(({ exercise, sets }: { exercise: { id: string; name: string }, sets: Array<{ weight_kg: number | null; is_bodyweight: boolean; reps: number; id: string }> }) => {
+                const best = getBestSet(sets as Parameters<typeof getBestSet>[0])
+                return (
+                  <div key={exercise.id} className="flex justify-between items-center text-sm">
+                    <span className="text-foreground">{exercise.name}</span>
+                    <span className="text-muted-foreground font-mono text-xs">
+                      {best ? `${best.is_bodyweight ? 'BW' : `${best.weight_kg}kg`} × ${best.reps}` : '—'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* No sessions yet */}
       {sessions.length === 0 && (
-        <div className="bg-zinc-900 rounded-2xl p-6 text-center">
-          <p className="text-zinc-400 text-sm">No workouts yet.</p>
-          <p className="text-zinc-500 text-xs mt-1">Log your first set to get started.</p>
-        </div>
+        <Card>
+          <CardContent className="py-8 text-center space-y-2">
+            <p className="text-muted-foreground text-sm">No workouts yet.</p>
+            <p className="text-muted-foreground text-xs">Log your first set to get started.</p>
+          </CardContent>
+        </Card>
       )}
     </div>
   )
@@ -113,7 +125,7 @@ function getGreeting() {
   return 'evening'
 }
 
-function groupByExercise(sets: Array<{ exercise_id: string; exercise: { id: string; name: string }; weight_kg: number | null; is_bodyweight: boolean; reps: number }>) {
+function groupByExercise(sets: Array<{ exercise_id: string; exercise: { id: string; name: string }; weight_kg: number | null; is_bodyweight: boolean; reps: number; id: string }>) {
   const map = new Map<string, { exercise: { id: string; name: string }; sets: typeof sets }>()
   sets.forEach(set => {
     if (!map.has(set.exercise_id)) map.set(set.exercise_id, { exercise: set.exercise, sets: [] })
