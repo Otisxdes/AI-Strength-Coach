@@ -76,49 +76,72 @@ export default function LogPage() {
 
       const today = new Date().toISOString().split('T')[0]
 
-      let { data: session } = await supabase
+      // Use maybeSingle to avoid error when no session exists yet
+      const { data: existingSession } = await supabase
         .from('workout_sessions')
         .select('id')
         .eq('user_id', user.id)
         .eq('date', today)
         .eq('workout_type', workoutType)
-        .single()
+        .maybeSingle()
 
-      if (!session) {
+      let sessionId = existingSession?.id
+
+      if (!sessionId) {
         const { data: newSession, error: sessionError } = await supabase
           .from('workout_sessions')
           .insert({ user_id: user.id, date: today, workout_type: workoutType })
           .select('id')
           .single()
-        if (sessionError) throw sessionError
-        session = newSession
+        if (sessionError) throw new Error(`Session error: ${sessionError.message}`)
+        sessionId = newSession!.id
       }
+
+      // Resolve all exercise IDs first, always re-check against DB
+      const { data: freshExercises } = await supabase
+        .from('exercises')
+        .select('id, name')
+        .eq('user_id', user.id)
+
+      const exerciseMap = new Map((freshExercises || []).map(e => [e.name.toLowerCase(), e.id]))
 
       const setsToInsert = []
       for (const p of parsed) {
-        let exerciseId = p.matched_exercise_id
-        if (!exerciseId) {
-          const existing = exercises.find(e => e.name.toLowerCase() === p.exercise_name.toLowerCase())
-          if (existing) {
-            exerciseId = existing.id
-          } else {
-            const { data: newEx } = await supabase
-              .from('exercises')
-              .insert({
-                user_id: user.id,
-                name: p.exercise_name,
-                muscle_group: 'Other',
-                progression_type: 'double_progression',
-                is_bodyweight: p.is_bodyweight
-              })
-              .select('id')
-              .single()
-            exerciseId = newEx?.id
-          }
+        // Try matched_exercise_id first, verify it's valid
+        let exerciseId: string | null = null
+
+        if (p.matched_exercise_id) {
+          const isValid = (freshExercises || []).some(e => e.id === p.matched_exercise_id)
+          if (isValid) exerciseId = p.matched_exercise_id
         }
+
+        // Fall back to name match
+        if (!exerciseId) {
+          exerciseId = exerciseMap.get(p.exercise_name.toLowerCase()) ?? null
+        }
+
+        // Create new exercise if still not found
+        if (!exerciseId) {
+          const { data: newEx, error: exError } = await supabase
+            .from('exercises')
+            .insert({
+              user_id: user.id,
+              name: p.exercise_name,
+              muscle_group: 'Other',
+              progression_type: 'double_progression',
+              is_bodyweight: p.is_bodyweight,
+              rep_range_min: 8,
+              rep_range_max: 12,
+            })
+            .select('id')
+            .single()
+          if (exError) throw new Error(`Exercise error: ${exError.message}`)
+          exerciseId = newEx!.id
+        }
+
         setsToInsert.push({
           user_id: user.id,
-          workout_session_id: session!.id,
+          workout_session_id: sessionId,
           exercise_id: exerciseId,
           set_number: p.set_number,
           weight_kg: p.weight_kg,
@@ -129,7 +152,7 @@ export default function LogPage() {
       }
 
       const { error: insertError } = await supabase.from('sets').insert(setsToInsert)
-      if (insertError) throw insertError
+      if (insertError) throw new Error(`Insert error: ${insertError.message}`)
 
       setSaved(true)
       setInput('')
