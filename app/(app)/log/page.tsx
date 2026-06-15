@@ -166,7 +166,9 @@ export default function LogPage() {
 
       {/* Workout type */}
       <div className="space-y-2">
-        <Label>Workout type</Label>
+        <Label>
+          Workout type <span className="text-destructive">*</span>
+        </Label>
         <div className="flex gap-2 flex-wrap">
           {WORKOUT_TYPES.map(t => (
             <button
@@ -183,6 +185,9 @@ export default function LogPage() {
             </button>
           ))}
         </div>
+        {!workoutType && (
+          <p className="text-muted-foreground text-xs">Select a workout type before saving</p>
+        )}
       </div>
 
       {/* Input */}
@@ -206,11 +211,11 @@ export default function LogPage() {
         <div className="space-y-3">
           <Button
             onClick={parseLog}
-            disabled={!input.trim() || parsing}
+            disabled={!input.trim() || parsing || !workoutType}
             className="w-full"
             size="lg"
           >
-            {parsing ? 'Parsing with AI…' : 'Parse Sets'}
+            {parsing ? 'Parsing with AI…' : !workoutType ? 'Select a workout type first' : 'Parse Sets'}
           </Button>
           <div className="text-center">
             <span className="text-muted-foreground text-xs">or </span>
@@ -296,7 +301,7 @@ export default function LogPage() {
 
           <Button
             onClick={saveSets}
-            disabled={saving || !workoutType}
+            disabled={saving}
             className="w-full"
             size="lg"
           >
